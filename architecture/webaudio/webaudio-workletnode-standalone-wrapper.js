@@ -867,11 +867,4 @@ let mydspProcessorString = `
 
 const dspName = "mydsp";
 
-// WAP factory or npm package module
-if (typeof module === "undefined") {
-    window.mydsp = mydsp;
-    window.Faustmydsp = mydsp;
-    window[dspName] = mydsp;
-} else {
-    module.exports = { mydsp };
-}
+export { mydsp };
