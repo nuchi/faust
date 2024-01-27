@@ -40,6 +40,10 @@ static Tree simplifyToNormalFormAux(Tree LS)
     startTiming("deBruijn2Sym");
     Tree L1 = deBruijn2Sym(LS);
     endTiming("deBruijn2Sym");
+
+    startTiming("recFlatten");
+    L1 = recFlatten(L1);
+    endTiming("recFlatten");
     
     // Annotate L1 with type information
     startTiming("L1 typeAnnotation");

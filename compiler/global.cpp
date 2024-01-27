@@ -257,6 +257,8 @@ global::global() : TABBER(1), gLoopDetector(1024, 400), gStackOverflowDetector(M
     gAsinPrim      = new AsinPrim();
 
     BOXIDENT         = symbol("BoxIdent");
+    BOXTAP           = symbol("BoxTap");
+    BOXTAPDEF        = symbol("BoxTapDef");
     BOXCUT           = symbol("BoxCut");
     BOXWAVEFORM      = symbol("BoxWaveform");
     BOXROUTE         = symbol("BoxRoute");
@@ -377,6 +379,7 @@ global::global() : TABBER(1), gLoopDetector(1024, 400), gStackOverflowDetector(M
     SYMREC    = symbol("SYMREC");
     SYMRECREF = symbol("SYMRECREF");
     SYMLIFTN  = symbol("LIFTN");
+    SYMLOWERN = symbol("LOWERN");
 
     gMachineFloatSize      = sizeof(float);
     gMachineInt32Size      = sizeof(int);
@@ -632,6 +635,8 @@ void global::init()
     NULLTYPEENV      = tree(symbol("NullTypeEnv"));
     RECDEF           = tree(symbol("RECDEF"));
     DEBRUIJN2SYM     = tree(symbol("deBruijn2Sym"));
+    RECFLATTEN       = tree(symbol("recFlatten"));
+    NEWNAME          = tree(symbol("newName"));
     NORMALFORM       = tree(symbol("NormalForm"));
     DEFNAMEPROPERTY  = tree(symbol("DEFNAMEPROPERTY"));
     NICKNAMEPROPERTY = tree(symbol("NICKNAMEPROPERTY"));

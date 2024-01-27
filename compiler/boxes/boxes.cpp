@@ -70,6 +70,32 @@ LIBFAUST_API bool isBoxIdent(Tree t0, const char** str)
     }
 }
 
+Tree boxTap(Tree lbl)
+{
+    return tree(gGlobal->BOXTAP, lbl);
+}
+LIBFAUST_API bool isBoxTap(Tree t)
+{
+    return t->node() == Node(gGlobal->BOXTAP);
+}
+LIBFAUST_API bool isBoxTap(Tree t0, Tree& lbl)
+{
+    return isTree(t0, gGlobal->BOXTAP, lbl);
+}
+
+Tree boxTapDef(Tree tap)
+{
+    return tree(gGlobal->BOXTAPDEF, tap);
+}
+LIBFAUST_API bool isBoxTapDef(Tree t)
+{
+    return t->node() == Node(gGlobal->BOXTAPDEF);
+}
+LIBFAUST_API bool isBoxTapDef(Tree t0, Tree& tap)
+{
+    return isTree(t0, gGlobal->BOXTAPDEF, tap);
+}
+
 /*****************************************************************************
                                     Numbers
 *****************************************************************************/

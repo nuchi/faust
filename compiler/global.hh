@@ -305,6 +305,8 @@ struct global {
     Tree NULLTYPEENV;
     Tree RECDEF;
     Tree DEBRUIJN2SYM;
+    Tree RECFLATTEN;
+    Tree NEWNAME;
     Tree NORMALFORM;
     Tree DEFNAMEPROPERTY;
     Tree NICKNAMEPROPERTY;
@@ -338,6 +340,8 @@ struct global {
 
     // Signals
     Sym BOXIDENT;
+    Sym BOXTAP;
+    Sym BOXTAPDEF;
     Sym BOXCUT;
     Sym BOXWAVEFORM;
     Sym BOXROUTE;
@@ -492,6 +496,7 @@ struct global {
     Sym SYMREC;
     Sym SYMRECREF;
     Sym SYMLIFTN;
+    Sym SYMLOWERN;
 
     // Evaluation overflow
     loopDetector          gLoopDetector;

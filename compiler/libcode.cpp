@@ -489,16 +489,17 @@ static void compileCPP(Tree signals, int numInputs, int numOutputs, ostream* out
 static void compileOCPP(Tree signals, int numInputs, int numOutputs)
 {
 #ifdef OCPP_BUILD
-    if (gGlobal->gSchedulerSwitch) {
-        gOldComp = new SchedulerCompiler(gGlobal->gClassName, gGlobal->gSuperClassName, numInputs, numOutputs);
-    } else if (gGlobal->gVectorSwitch) {
-        gOldComp = new VectorCompiler(gGlobal->gClassName, gGlobal->gSuperClassName, numInputs, numOutputs);
-    } else {
-        gOldComp = new ScalarCompiler(gGlobal->gClassName, gGlobal->gSuperClassName, numInputs, numOutputs);
-    }
+    // if (gGlobal->gSchedulerSwitch) {
+    //     gOldComp = new SchedulerCompiler(gGlobal->gClassName, gGlobal->gSuperClassName, numInputs, numOutputs);
+    // } else if (gGlobal->gVectorSwitch) {
+    //     gOldComp = new VectorCompiler(gGlobal->gClassName, gGlobal->gSuperClassName, numInputs, numOutputs);
+    // } else {
+    //     gOldComp = new ScalarCompiler(gGlobal->gClassName, gGlobal->gSuperClassName, numInputs, numOutputs);
+    // }
 
-    if (gGlobal->gPrintXMLSwitch || gGlobal->gPrintDocSwitch) gOldComp->setDescription(new Description());
-    gOldComp->compileMultiSignal(signals);
+    // if (gGlobal->gPrintXMLSwitch || gGlobal->gPrintDocSwitch) gOldComp->setDescription(new Description());
+    // gOldComp->compileMultiSignal(signals);
+    throw faustexception("ERROR : -lang ocpp not supported by this faust fork\n");
 #else
     throw faustexception("ERROR : -lang ocpp not supported since old CPP backend is not built\n");
 #endif
@@ -779,6 +780,7 @@ static void compileDlang(Tree signals, int numInputs, int numOutputs, ostream* o
 static void compileVhdl(Tree signals, int numInputs, int numOutputs, ostream* out)
 {
 #ifdef VHDL_BUILD
+    cerr << "WARNING : -lang vhdl is not supported in this faust fork, use it at your own risk" << endl;
     signals = simplifyToNormalForm(signals);
     VhdlProducer vhdl_prod = VhdlProducer(signals, gGlobal->gClassName, numInputs, numOutputs);
     vhdl_prod.optimize();

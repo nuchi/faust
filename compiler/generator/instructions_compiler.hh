@@ -63,6 +63,8 @@ class InstructionsCompiler : public virtual Garbageable {
     UITree       fUITree;
     Description* fDescription;
     
+    Tree fSigsToCompile = gGlobal->nil;
+
     /*
      -dlt <N> : threshold between 'mask' and 'select' based ring-buffer delay line model.
      'mask' delay-lines use the next power-of-two value size and a mask (faster but use more memory)

@@ -32,6 +32,7 @@ using namespace std;
 
 DAGInstructionsCompiler::DAGInstructionsCompiler(CodeContainer* container) : InstructionsCompiler(container)
 {
+    throw faustexception("ERROR : Vectorizing is not supported by this faust fork.\n");
 }
 
 void DAGInstructionsCompiler::compileMultiSignal(Tree L)

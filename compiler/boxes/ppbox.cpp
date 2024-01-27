@@ -338,6 +338,10 @@ ostream& boxpp::print(ostream& fout) const
         fout << "x" << id;
     } else if (isBoxSymbolic(fBox, slot, body)) {
         fout << "\\(" << boxpp(slot) << ").(" << boxpp(body) << ")";
+    } else if (isBoxTap(fBox, label)) {
+        fout << "catch(" << tree2quotedstr(label) << ')';
+    } else if (isBoxTapDef(fBox, t1) && isBoxTap(t1, label)) {
+        fout << "throw(" << tree2quotedstr(label) << ')';
     }
 
     // pattern Matching Extensions

@@ -91,7 +91,7 @@ Tree InstructionsCompiler::prepare(Tree LS)
      sigIntCast on bool producing BinOp operations.
      */
     if (gGlobal->gBool2Int) L1 = signalBool2IntPromote(L1);
-    
+
     /*
      Special 'select' casting mode in -fx generation.
      */
@@ -392,6 +392,9 @@ ValueInst* InstructionsCompiler::CS(Tree sig)
     if (!getCompiledExpression(sig, code)) {
         code = generateCode(sig);
         setCompiledExpression(sig, code);
+    } else if (dynamic_cast<NullValueInst*>(code)) {
+        // recursion guard
+        throw faustexception("ERROR : causality violation, some signal depends on itself.\n");
     }
 
     return code;
@@ -579,6 +582,12 @@ void InstructionsCompiler::compileMultiSignal(Tree L)
         }
     }
 
+    while (isList(fSigsToCompile)) {
+        Tree sig = hd(fSigsToCompile);
+        fSigsToCompile = tl(fSigsToCompile);
+        CS(sig);
+    }
+
     if (gGlobal->gOutputLang == "jax") {
         return_string = return_string + "])";
         pushPostComputeDSPMethod(InstBuilder::genRetInst(InstBuilder::genLoadStackVar(return_string)));
@@ -608,6 +617,12 @@ void InstructionsCompiler::compileSingleSignal(Tree sig)
 
     pushComputeDSPMethod(InstBuilder::genStoreArrayFunArgsVar(name, getCurrentLoopIndex(), CS(sig)));
 
+    while (isList(fSigsToCompile)) {
+        Tree sigToCompile = hd(fSigsToCompile);
+        fSigsToCompile = tl(fSigsToCompile);
+        CS(sigToCompile);
+    }
+
     Tree ui = fUITree.prepareUserInterfaceTree();
     generateUserInterfaceTree(ui);
     generateMacroInterfaceTree("", ui);
@@ -634,8 +649,11 @@ ValueInst* InstructionsCompiler::generateCode(Tree sig)
 #endif
 
     ValueInst* code;
-    if (getCompiledExpression(sig, code)) {
+    if (getCompiledExpression(sig, code) && !dynamic_cast<NullValueInst*>(code)) {
         return code;
+    } else {
+        // prevent infinite recursion
+        setCompiledExpression(sig, InstBuilder::genNullValueInst());
     }
 
     int     i;
@@ -752,8 +770,12 @@ ValueInst* InstructionsCompiler::generateIntNumber(Tree sig, int num)
     // Check for number occuring in delays
     if (o->getMaxDelay() > 0) {
         Typed::VarType ctype;
-        string         vname;
-        getTypedNames(getCertifiedSigType(sig), "Vec", ctype, vname);
+        string         vname, _unused;
+        if (!getVectorNameProperty(sig, vname)) {
+            getTypedNames(getCertifiedSigType(sig), "Vec", ctype, vname);
+        } else {
+            getTypedNames(getCertifiedSigType(sig), "Vec", ctype, _unused);
+        }
         generateDelayVec(sig, InstBuilder::genInt32NumInst(num), ctype, vname, o->getMaxDelay());
     }
 
@@ -768,8 +790,12 @@ ValueInst* InstructionsCompiler::generateInt64Number(Tree sig, int64_t num)
     // Check for number occuring in delays
     if (o->getMaxDelay() > 0) {
         Typed::VarType ctype;
-        string         vname;
-        getTypedNames(getCertifiedSigType(sig), "Vec", ctype, vname);
+        string         vname, _unused;
+        if (!getVectorNameProperty(sig, vname)) {
+            getTypedNames(getCertifiedSigType(sig), "Vec", ctype, vname);
+        } else {
+            getTypedNames(getCertifiedSigType(sig), "Vec", ctype, _unused);
+        }
         generateDelayVec(sig, InstBuilder::genInt64NumInst(num), ctype, vname, o->getMaxDelay());
     }
     
@@ -784,8 +810,12 @@ ValueInst* InstructionsCompiler::generateRealNumber(Tree sig, double num)
 
     // Check for number occuring in delays
     if (o->getMaxDelay() > 0) {
-        string vname;
-        getTypedNames(getCertifiedSigType(sig), "Vec", ctype, vname);
+        string vname, _unused;
+        if (!getVectorNameProperty(sig, vname)) {
+            getTypedNames(getCertifiedSigType(sig), "Vec", ctype, vname);
+        } else {
+            getTypedNames(getCertifiedSigType(sig), "Vec", ctype, _unused);
+        }
         generateDelayVec(sig, InstBuilder::genRealNumInst(ctype, num), ctype, vname, o->getMaxDelay());
     }
 
@@ -819,11 +849,15 @@ ValueInst* InstructionsCompiler::generateFConst(Tree sig, Tree type, const strin
 
     // Check for number occuring in delays
     Typed::VarType ctype;
-    string         vname;
+    string         vname, _unused;
     Occurrences* o = fOccMarkup->retrieve(sig);
 
     if (o->getMaxDelay() > 0) {
-        getTypedNames(getCertifiedSigType(sig), "Vec", ctype, vname);
+        if (!getVectorNameProperty(sig, vname)) {
+            getTypedNames(getCertifiedSigType(sig), "Vec", ctype, vname);
+        } else {
+            getTypedNames(getCertifiedSigType(sig), "Vec", ctype, _unused);
+        }
         generateDelayVec(
             sig, (name == "fSampleRate") ? InstBuilder::genLoadStructVar(name) : InstBuilder::genLoadGlobalVar(name),
             ctype, vname, o->getMaxDelay());
@@ -967,11 +1001,11 @@ ValueInst* InstructionsCompiler::generateCacheCode(Tree sig, ValueInst* exp)
     ValueInst* code;
 
     // Check reentrance
-    if (getCompiledExpression(sig, code)) {
+    if (getCompiledExpression(sig, code) && !dynamic_cast<NullValueInst*>(code)) {
         return code;
     }
 
-    string         vname;
+    string         vname, _unused;
     Typed::VarType ctype;
     int            sharing = getSharingCount(sig, fSharingKey);
     Occurrences* o         = fOccMarkup->retrieve(sig);
@@ -979,7 +1013,11 @@ ValueInst* InstructionsCompiler::generateCacheCode(Tree sig, ValueInst* exp)
 
     // Check for expression occuring in delays
     if (o->getMaxDelay() > 0) {
-        getTypedNames(getCertifiedSigType(sig), "Vec", ctype, vname);
+        if (!getVectorNameProperty(sig, vname)) {
+            getTypedNames(getCertifiedSigType(sig), "Vec", ctype, vname);
+        } else {
+            getTypedNames(getCertifiedSigType(sig), "Vec", ctype, _unused);
+        }
         if (sharing > 1) {
             return generateDelayVec(sig, generateVariableStore(sig, exp), ctype, vname, o->getMaxDelay());
         } else {
@@ -1005,18 +1043,22 @@ ValueInst* InstructionsCompiler::forceCacheCode(Tree sig, ValueInst* exp)
     ValueInst* code;
 
     // check reentrance
-    if (getCompiledExpression(sig, code)) {
+    if (getCompiledExpression(sig, code) && !dynamic_cast<NullValueInst*>(code)) {
         return code;
     }
    
-    string         vname;
+    string         vname, _unused;
     Typed::VarType ctype;
     Occurrences*    o = fOccMarkup->retrieve(sig);
     faustassert(o);
 
     // check for expression occuring in delays
     if (o->getMaxDelay() > 0) {
-        getTypedNames(getCertifiedSigType(sig), "Vec", ctype, vname);
+        if (!getVectorNameProperty(sig, vname)) {
+            getTypedNames(getCertifiedSigType(sig), "Vec", ctype, vname);
+        } else {
+            getTypedNames(getCertifiedSigType(sig), "Vec", ctype, _unused);
+        }
         return generateDelayVec(sig, generateVariableStore(sig, exp), ctype, vname, o->getMaxDelay());
     } else {
         return generateVariableStore(sig, exp);
@@ -1540,7 +1582,7 @@ ValueInst* InstructionsCompiler::generateStaticTable(Tree sig, Tree tsize, Tree 
 
     faustassert(isSigGen(content, g));
 
-    if (!getCompiledExpression(content, signame)) {
+    if (!getCompiledExpression(content, signame) || dynamic_cast<NullValueInst*>(signame)) {
         signame = setCompiledExpression(content, generateStaticSigGen(content, g));
     } else {
         // already compiled but check if we need to add declarations
@@ -1664,7 +1706,7 @@ ValueInst* InstructionsCompiler::generateRDTbl(Tree sig, Tree tbl, Tree ri)
     if (isSigWRTbl(tbl, size, gen)) {
         // rdtable
         access = Address::kStaticStruct;
-        if (!getCompiledExpression(tbl, tblname)) {
+        if (!getCompiledExpression(tbl, tblname) || dynamic_cast<NullValueInst*>(tblname)) {
             tblname = setCompiledExpression(tbl, generateStaticTable(tbl, size, gen));
         }
     } else {
@@ -1693,59 +1735,36 @@ ValueInst* InstructionsCompiler::generateRecProj(Tree sig, Tree r, int i)
     Tree       var, le;
     ValueInst* res;
 
-    if (!getVectorNameProperty(sig, vname)) {
-        faustassert(isRec(r, var, le));
-        res = generateRec(r, var, le, i);
-        faustassert(getVectorNameProperty(sig, vname));
-    } else {
-        res = InstBuilder::genNullValueInst();  // Result not used
-    }
+    faustassert(isRec(r, var, le));
+    res = generateRec(r, var, le, i);
+    faustassert(getVectorNameProperty(sig, vname));
     return res;
 }
 
 /**
  * Generate code for a group of mutually recursive definitions
  */
-ValueInst* InstructionsCompiler::generateRec(Tree sig, Tree var, Tree le, int index)
+ValueInst* InstructionsCompiler::generateRec(Tree sig, Tree var, Tree le, int i)
 {
-    int N = len(le);
+    string vname;
+    string _unused;
+    Typed::VarType ctype;
 
-    ValueInst*             res = nullptr;
-    vector<bool>           used(N);
-    vector<int>            delay(N);
-    vector<string>         vname(N);
-    vector<Typed::VarType> ctype(N);
+    Tree e = sigProj(i, sig);  // recreate projection
+    int delay = fOccMarkup->retrieve(e)->getMaxDelay();
 
-    // Prepare each element of a recursive definition
-    for (int i = 0; i < N; i++) {
-        Tree e = sigProj(i, sig);  // recreate each recursive definition
-        if (fOccMarkup->retrieve(e)) {
-            // This projection is used
-            used[i] = true;
-            getTypedNames(getCertifiedSigType(e), "Rec", ctype[i], vname[i]);
-            setVectorNameProperty(e, vname[i]);
-            delay[i] = fOccMarkup->retrieve(e)->getMaxDelay();
-        } else {
-            // This projection is not used therefore
-            // we should not generate code for it
-            used[i] = false;
-        }
+    if (!getVectorNameProperty(e, vname)) {
+        getTypedNames(getCertifiedSigType(e), "Rec", ctype, vname);
+        setVectorNameProperty(e, vname);
+    } else {
+        getTypedNames(getCertifiedSigType(e), "Rec", ctype, _unused);
     }
 
-    // Generate delayline for each element of a recursive definition
-    for (int i = 0; i < N; i++) {
-        if (used[i]) {
-            Address::AccessType access;
-            ValueInst* ccs = getConditionCode(nth(le, i));
-            if (index == i) {
-                res = generateDelayLine(CS(nth(le, i)), ctype[i], vname[i], delay[i], access, ccs);
-            } else {
-                generateDelayLine(CS(nth(le, i)), ctype[i], vname[i], delay[i], access, ccs);
-            }
-        }
-    }
-
-    return res;
+    ValueInst* ccs = getConditionCode(nth(le, i));
+    Tree out = nth(le, i);
+    auto exp = CS(out);
+    Address::AccessType access;
+    return generateDelayLine(exp, ctype, vname, delay, access, ccs);
 }
 
 /*****************************************************************************
@@ -1897,29 +1916,42 @@ ValueInst* InstructionsCompiler::generateXtended(Tree sig)
  */
 ValueInst* InstructionsCompiler::generateDelayAccess(Tree sig, Tree exp, Tree delay)
 {
-    ValueInst* code = CS(exp);  // Ensure exp is compiled to have a vector name
     int        mxd  = fOccMarkup->retrieve(exp)->getMaxDelay();
     string     vname;
 
-    if (!getVectorNameProperty(exp, vname)) {
-        if (mxd == 0) {
-            // cerr << "it is a pure zero delay : " << code << endl;
-            return code;
-        } else {
-            cerr << "ASSERT : no vector name for : " << ppsig(exp, MAX_ERROR_SIZE) << endl;
-            faustassert(false);
-        }
-    }
+    int            d;
+    bool    intDelay = isSigInt(delay, &d);
 
     if (mxd == 0) {
-
+        auto out = CS(exp);
+        if (!getVectorNameProperty(exp, vname)) {
+            return out;
+        }
         // not a real vector name but a scalar name
         return InstBuilder::genLoadStackVar(vname);
+    }
 
-    } else if (mxd < gGlobal->gMaxCopyDelay) {
-        int d;
-        if (isSigInt(delay, &d)) {
-            return InstBuilder::genLoadArrayStructVar(vname, CS(delay));
+    if (getCertifiedSigType(delay)->getInterval().hasZero()) {
+        CS(exp);
+    } else {
+        fSigsToCompile = cons(exp, fSigsToCompile);
+    }
+
+    if (!getVectorNameProperty(exp, vname)) {
+        Typed::VarType ctype;
+        string prefix = "Vec";
+        Tree sub;
+        int i;
+        if (isProj(exp, &i, sub) ) {
+            prefix = "Rec";
+        }
+        getTypedNames(getCertifiedSigType(exp), prefix, ctype, vname);
+        setVectorNameProperty(exp, vname);
+    }
+
+    if (mxd < gGlobal->gMaxCopyDelay) {
+        if (intDelay) {
+            return InstBuilder::genLoadArrayStructVar(vname, CS(delay));;
         } else {
             return generateCacheCode(sig, InstBuilder::genLoadArrayStructVar(vname, CS(delay)));
         }

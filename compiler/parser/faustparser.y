@@ -30,7 +30,7 @@ extern int          FAUSTerr;
 
 int FAUSTlex();
 
-void yyerror(char* msg) 
+void yyerror(char* msg)
 {
     std::stringstream error;
     error << FAUSTfilename << " : " << FAUSTlineno << " : ERROR : " << msg << endl;
@@ -195,6 +195,8 @@ inline Tree unquote(char* str)
 %token MODULATE
 %token LAMBDA
 %token DOT
+%token THROW
+%token CATCH
 
 %token WIRE
 %token CUT
@@ -298,6 +300,8 @@ inline Tree unquote(char* str)
 %type <exp> arglist
 
 %type <exp> ident
+%type <exp> throw
+%type <exp> catch
 %type <exp> name
 
 %type <exp> ffunction
@@ -597,6 +601,8 @@ primitive       : INT                           { $$ = boxInt(str2int(FAUSTtext)
 
                 | ident                          { $$ = $1; setUseProp($1, FAUSTfilename, FAUSTlineno);}
                 | SUB ident                      { $$ = boxSeq(boxPar(boxInt(0),$2),boxSub()); }
+                | throw                          { $$ = $1; }
+                | catch                          { $$ = $1; }
 
                 | LPAR expression RPAR            { $$ = $2; }
                 | LAMBDA LPAR params RPAR DOT LPAR expression RPAR
@@ -641,6 +647,12 @@ primitive       : INT                           { $$ = boxInt(str2int(FAUSTtext)
                 ;
 
 ident           : IDENT                         { $$ = boxIdent(FAUSTtext); setUseProp($$, FAUSTfilename, FAUSTlineno);  }
+                ;
+
+catch           : CATCH LPAR uqstring RPAR      { $$ = boxTap($3); setUseProp($$, FAUSTfilename, FAUSTlineno);  }
+                ;
+
+throw           : THROW LPAR uqstring RPAR      { $$ = boxTapDef(boxTap($3)); setDefProp($$, FAUSTfilename, FAUSTlineno);  }
                 ;
 
 name            : IDENT                         { $$ = tree(FAUSTtext); setUseProp($$, FAUSTfilename, FAUSTlineno);  }

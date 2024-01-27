@@ -126,6 +126,34 @@ static Tree label2path(const char* label)
     }
 }
 
+void path2label(Tree path, stringstream& label) {
+    if (!isList(path)) {
+        return;
+    }
+
+    path2label(tl(path), label);
+
+    Tree head = hd(path);
+    if (isList(head)) {
+        // group
+        Tree group = hd(head);
+        Tree name = tl(head);
+        if (group == tree(0)) {
+            label << "v:";
+        } else if (group == tree(1)) {
+            label << "h:";
+        } else if (group == tree(2)) {
+            label << "t:";
+        } else {
+            label << "v:";
+        }
+        label << tree2str(name) << '/';
+    } else {
+        // just the name
+        label << tree2str(head);
+    }
+}
+
 /**
  * Concatenate the relative path to the absolute path
  * Note that the relpath is top-down while the abspath

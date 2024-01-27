@@ -164,6 +164,9 @@ NSID     {ID}("::"{ID})*
 "hbargraph"   return HBARGRAPH;
 "soundfile"   return SOUNDFILE;
 
+"throw"       return THROW;
+"catch"       return CATCH;
+
 "attach"      return ATTACH;
 "minput"	  return MODULATE;
 

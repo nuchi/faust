@@ -47,8 +47,8 @@ Tree boxPropagateSig(Tree path, Tree box, const siglist& lsig);
  * @param path user interface group path
  * @param box the block diagram
  * @param lsig the list of input signals to propagate
- * @return the resulting list of output signals
+ * @return the resulting list of output signals and the tap environment
  */
-siglist propagate(Tree slotenv, Tree path, Tree box, const siglist& lsig);
+siglistAndTaps propagate(Tree slotenv, Tree path, Tree box, const siglist& lsig, bool fakeTap);
 
 #endif

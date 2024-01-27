@@ -31,5 +31,6 @@
 Tree normalizePath(Tree path);
 Tree superNormalizePath(Tree path);
 bool matchGroup(Tree gpath, Tree lpath, Tree& rpath);
+void path2label(Tree path, std::stringstream& label);
 
 #endif

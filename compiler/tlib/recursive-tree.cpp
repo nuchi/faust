@@ -25,6 +25,7 @@
 
 #include "exception.hh"
 #include "global.hh"
+#include "signals.hh"
 #include "tlib.hh"
 #include "faust/export.h"
 
@@ -32,10 +33,13 @@ using namespace std;
 
 // Declaration of implementation
 static Tree calcDeBruijn2Sym(Tree t);
+static Tree recFlattenCalc(Tree t);
 static Tree substitute(Tree t, int n, Tree id);
 static Tree calcsubstitute(Tree t, int level, Tree id);
 Tree liftn(Tree t, int threshold);
 static Tree calcliftn(Tree t, int threshold);
+static Tree lowern(Tree t, int threshold);
+static Tree calclowern(Tree t, int threshold);
 
 // Tree	NOVAR = tree("NOVAR");
 
@@ -200,6 +204,75 @@ static Tree calcliftn(Tree t, int threshold)
     }
 }
 
+/* bool lower(t, result) : tries to obviate needing to wrap t in a rec() by subtracting 1 from
+    any free references that are higher than what that rec() would be.
+    e.g.
+      1 + ref(2) --> 1 + ref(1)
+      1 + ref(2) + rec(ref(1) + ref(3)) --> 1 + ref(1) + rec(ref(1) + ref(2))
+      1 + ref(1) --> fails
+      1 + ref(2) + rec(ref(1) + ref(2)) --> fails
+*/
+
+bool lower(Tree t, Tree& result) {
+    Tree L = lowern(t, 1);
+    if (tl(L) == tree(1)) {
+        result = hd(L);
+        return true;
+    }
+    return false;
+}
+
+Tree lowern(Tree t, int threshold)
+{
+    Tree L  = tree(Node(gGlobal->SYMLOWERN), tree(Node(threshold)));
+    Tree t2 = t->getProperty(L);
+
+    if (!t2) {
+        t2 = calclowern(t, threshold);
+        t->setProperty(L, t2);
+    }
+    return t2;
+}
+
+static Tree calclowern(Tree t, int threshold) {
+    int n;
+    Tree u;
+
+    if (isClosed(t)) {
+        return cons(t, tree(1));
+    } else if (isRef(t, n)) {
+        if (n < threshold) {
+            // bounded reference
+            return cons(t, tree(1));
+        } else if (n == threshold) {
+            // free reference but we can't lower it
+            return cons(gGlobal->nil, tree(0));
+        } else {
+            // n > threshold
+            return cons(ref(n-1), tree(1));
+        }
+    } else if (isRec(t, u)) {
+        Tree res = lowern(u, threshold + 1);
+        if (tl(res) == tree(1)) {
+            return cons(rec(hd(res)), tree(1));
+        } else {
+            return cons(gGlobal->nil, tree(0));
+        }
+    } else {
+        int n1 = t->arity();
+        tvec br(n1);
+        for (int i = 0; i < n1; i++) {
+            Tree res = lowern(t->branch(i), threshold);
+            if (!(tl(res) == tree(1))) {
+                return cons(gGlobal->nil, tree(0));
+            }
+            br[i] = hd(res);
+        }
+        // if we made it here, each branch was successful
+        return cons(CTree::make(t->node(), br), tree(1));
+    }
+}
+
 //-----------------------------------------------------------
 // Transform a tree from deBruijn to symbolic representation
 //-----------------------------------------------------------
@@ -222,7 +295,8 @@ static Tree calcDeBruijn2Sym(Tree t)
     int  i;
 
     if (isRec(t, body)) {
-        var = tree(unique("W"));
+        // We need unique names for now but they'll get new unique names later
+        var = tree(unique("_W"));
         return rec(var, deBruijn2Sym(substitute(body, 1, ref(var))));
 
     } else if (isRef(t, var)) {
@@ -238,6 +312,76 @@ static Tree calcDeBruijn2Sym(Tree t)
         tvec br(a);
         for (int i1 = 0; i1 < a; i1++) {
             br[i1] = deBruijn2Sym(t->branch(i1));
+        }
+        return CTree::make(t->node(), br);
+    }
+}
+
+Tree recFlatten(Tree t) {
+    Tree val = t->getProperty(gGlobal->RECFLATTEN);
+
+    if (!val) {
+        val = recFlattenCalc(t);
+        t->setProperty(gGlobal->RECFLATTEN, val);
+    }
+    return val;
+}
+
+static Tree recFlattenCalc(Tree t) {
+    int i, n;
+    Tree r, x, d;
+
+    if (isProj(t, &i, r)) {
+        Tree oldvar, le;
+        faustassert(isRec(r, oldvar, le));
+        // key the variable by contents of sigProj(rec(...)) so that identical variables
+        // can reuse the same signal
+        Tree oldBody = nth(le, i);
+        Tree seen = cons(t, gGlobal->nil);
+
+        // just immediately go to the first time we have a non-sigProj
+        while (
+            isSigDelay(oldBody, x, d)
+            && isSigInt(d, &n)
+            && n == 0
+            && !isElement(x, seen) // avoid infinite loops
+            && isProj(x, &i, r))
+        {
+            faustassert(isRec(r, oldvar, le));
+            oldBody = nth(le, i);
+            seen = cons(x, seen);
+        }
+
+        // New name for the variable body is keyed by its actual body, so identical
+        // variables should get identical names.
+        Tree key = oldBody;
+        Tree var = key->getProperty(gGlobal->NEWNAME);
+        if (!var) {
+            var = tree(unique("W"));
+            key->setProperty(gGlobal->NEWNAME, var);
+        }
+
+        // It's created with "ref" but it's the same as a "rec" without a body definition
+        Tree newrec = ref(var);
+        Tree newsig = sigDelay0(sigProj(0, newrec));
+
+        // If our newrec already has a body defined then we've seen it before, we can just
+        // stop now
+        if (newrec->getProperty(gGlobal->RECDEF)) {
+            return newsig;
+        }
+
+        // if we reenter the same sigProj then just use the new variable name
+        t->setProperty(gGlobal->RECFLATTEN, newsig);
+        Tree newBody = cons(recFlatten(oldBody), gGlobal->nil);
+        // set body of the new variable to the result we got
+        newrec->setProperty(gGlobal->RECDEF, newBody);
+        return newsig;
+    } else {
+        int  a = t->arity();
+        tvec br(a);
+        for (int i1 = 0; i1 < a; i1++) {
+            br[i1] = recFlatten(t->branch(i1));
         }
         return CTree::make(t->node(), br);
     }

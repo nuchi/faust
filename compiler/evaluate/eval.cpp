@@ -587,6 +587,18 @@ static Tree realeval(Tree exp, Tree visited, Tree localValEnv)
     } else if (isBoxSlot(exp)) {
         return exp;
 
+    } else if (isBoxTap(exp, label)) {
+        const char* l1 = tree2str(label);
+        string      l2 = evalLabel(l1, visited, localValEnv);
+        Tree res = boxTap(tree(l2.c_str()));
+        res->setProperty(gGlobal->USELINEPROP, exp->getProperty(gGlobal->USELINEPROP));
+        return res;
+
+    } else if (isBoxTapDef(exp, e1)) {
+        Tree res = boxTapDef(eval(e1, visited, localValEnv));
+        res->setProperty(gGlobal->DEFLINEPROP, exp->getProperty(gGlobal->DEFLINEPROP));
+        return res;
+
     } else if (isBoxSymbolic(exp)) {
         return exp;
 

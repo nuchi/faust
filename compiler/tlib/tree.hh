@@ -279,8 +279,12 @@ inline bool isClosed(Tree t)
 // Lift by 1 the free de Bruijn references
 
 Tree lift(Tree t);  ////< add 1 to the free de bruijn references of t
+Tree liftn(Tree t, int threshold);
+bool lower(Tree t, Tree& result); ////< try to subtract 1 from free references that would point
+                                    // out of rec(t)
 
 Tree deBruijn2Sym(Tree t);  ////< transform a tree from deBruijn to symbolic representation
+Tree recFlatten(Tree t);
 
 //---------------------------------------------------------------------------
 

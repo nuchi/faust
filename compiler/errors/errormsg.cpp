@@ -36,10 +36,11 @@ void faustassertaux(bool cond, const string& file, int line)
 {
     if (!cond) {
         stringstream str;
+        str << "ASSERT : This is a fork of faust, adding throw/catch primitives. If you are using throw/catch, ";
 #ifdef EMCC
-        str << "ASSERT : please report this message and the failing DSP file to Faust developers (";
+        str << "please report this message and the failing DSP file at https://github.com/nuchi/faust/issues (";
 #else
-        str << "ASSERT : please report this message, the stack trace, and the failing DSP file to Faust developers (";
+        str << "please report this message, the stack trace, and the failing DSP file at https://github.com/nuchi/faust/issues (";
 #endif
         str << "file: " << file.substr(file.find_last_of('/') + 1) << ", line: " << line << ", ";
         str << "version: " << FAUSTVERSION;
