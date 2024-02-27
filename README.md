@@ -1,3 +1,120 @@
+# Faust fork: throw/catch primitives
+
+This is a fork of the Faust compiler (see below for original readme) which adds `throw`/`catch` primitives to the language. These can be used to transport signals to and from any destination within the program. The motivation is to allow for easily debugging signals deep in a nested program without having to use contortions to extract the signal.
+
+I tried to address this problem with a much simpler solution entirely within the faust language, [faust-tap-library](https://github.com/nuchi/faust-tap-library), but this approach had limitations and I wasn't fully satisfied with it. Hence this fork, which adds the feature into the language itself.
+
+## Usage
+
+`throw("foo")` is a box with 1 input and 0 outputs. `catch("foo")` is a box with 0 inputs and 1 output. If the names match, the signal will be transported from the first to the second, anywhere within the program.
+
+Example:
+```dsp
+a = _ : *(2) : (_ <: _, throw("foo")) : +(5);
+process = a, catch("foo");
+```
+
+Block diagram:
+![a](./readme-svgs/a.svg)
+
+C++ output:
+```c++
+for (int i0 = 0; i0 < count; i0 = i0 + 1) {
+    float fTemp0 = 2.0f * float(input0[i0]);
+    output0[i0] = FAUSTFLOAT(fTemp0 + 5.0f);
+    float fRec0 = fTemp0;
+    output1[i0] = FAUSTFLOAT(fRec0);
+}
+```
+
+The `throw` primitive doesn't need to be part of the output, just the `catch`, though it does need to be part of the whole signal. It can also appear after the `catch`, it doesn't have to be before.
+
+Example:
+```dsp
+b = _ : *(2) : (_ <: _, throw("foo")) : +(5);
+
+// This has an error because throw("foo") is not part of the signal
+// process = catch("foo");
+
+// This is ok!
+process = catch("foo"), (b : !);
+```
+
+Block diagram:
+![b](./readme-svgs/b.svg)
+
+C++ output:
+```c++
+for (int i0 = 0; i0 < count; i0 = i0 + 1) {
+    float fRec0 = 2.0f * float(input0[i0]);
+    output0[i0] = FAUSTFLOAT(fRec0);
+}
+```
+
+They can even depend recursively on each other, as long as there are delays so that causality isn't violated.
+```dsp
+A = (+ : throw("foo") : catch("bar")) ~ _;
+B = (+ : throw("bar") : catch("foo")) ~ _;
+process = A, B;
+
+// error, causality violation:
+// process = (catch("z") : throw("z")), catch("z");
+```
+
+Block diagram:
+![c](./readme-svgs/c.svg)
+
+C++ output:
+```c++
+for (int i0 = 0; i0 < count; i0 = i0 + 1) {
+    fRec0[0] = float(input1[i0]) + fRec1[1];
+    output0[i0] = FAUSTFLOAT(fRec0[0]);
+    fRec1[0] = float(input0[i0]) + fRec0[1];
+    output1[i0] = FAUSTFLOAT(fRec1[0]);
+    fRec0[1] = fRec0[0];
+    fRec1[1] = fRec1[0];
+}
+```
+
+Throw and catch use the same variable interpolation and path mechanisms as labels for sliders and bargraphs and groups.
+
+Example:
+```dsp
+d = hgroup("foo", par(i, 5, throw("%i")));
+process = d : par(i, 5, catch("h:foo/%j") with {j = (i + 1) % 5;});
+```
+
+Block diagram:
+![d](./readme-svgs/d.svg)
+
+C++ output:
+```c++
+for (int i0 = 0; i0 < count; i0 = i0 + 1) {
+    float fRec0 = float(input1[i0]);
+    output0[i0] = FAUSTFLOAT(fRec0);
+    float fRec1 = float(input2[i0]);
+    output1[i0] = FAUSTFLOAT(fRec1);
+    float fRec2 = float(input3[i0]);
+    output2[i0] = FAUSTFLOAT(fRec2);
+    float fRec3 = float(input4[i0]);
+    output3[i0] = FAUSTFLOAT(fRec3);
+    float fRec4 = float(input0[i0]);
+    output4[i0] = FAUSTFLOAT(fRec4);
+}
+```
+
+## Limitations
+
+The vectorizing compiler is not supported (i.e. the `-vec` flag, or any other flag that sets it), nor the `-lang ocpp` flag. The impulse tests pass on the C++ backend for the `-double` flag, for the existing test cases. I haven't checked the other backends in depth, though I expect they'll pass as well. I haven't added any tests for the throw/catch feature. Contributions welcome.
+
+On programs that don't use the throw/catch feature, this fork may produce slightly different code than the official compiler. As far as I've been able to check with the impulse tests, it's functionally the same, but the memory layout will often be different, and I don't know if that's for the better or for the worse as far as cache performance goes. Some instructions will also be generated in different order, though topological order will be the same. Again I don't know if performance is better or worse that way.
+
+If you have two `throw`s with the same name, only one of them will be used (arbitrarily). I haven't added a check for duplicate definitions. Contributions welcome, it should be straightforward.
+
+Below is the readme for the official Faust project.
+
+***
+
 # Faust - Programming Language for Audio Applications and Plugins
 
 ## Grame, Centre National de Creation Musicale: <https://www.grame.fr>
