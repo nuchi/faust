@@ -38,7 +38,7 @@ siglist makeSigInputList(int n);
  * compute the list of outputs of a block-diagram with n inputs, do:
  * Tree lsig = boxPropagateSig(path, box, makeSigInputList(n));
  */
-Tree boxPropagateSig(Tree path, Tree box, const siglist& lsig);
+Tree boxPropagateSig(Tree path, Tree box, const siglist& lsig, bool inEval=false);
 
 /**
  * Propagate a list of signals into a block diagram. Do memoization.

@@ -670,10 +670,17 @@ siglist makeSigInputList(int n)
  * @return the resulting list of output signals
  */
 
-Tree boxPropagateSig(Tree path, Tree box, const siglist& lsig)
+Tree boxPropagateSig(Tree path, Tree box, const siglist& lsig, bool inEval)
 {
     bool fakeTap = true;
     siglistAndTaps withFakeTaps = propagate(gGlobal->nil, path, box, lsig, fakeTap);
+
+    // In eval.cpp, we call this function to simplify some boxes. In that case we don't care
+    // about extra taps, just return the signals without any further processing.
+    if (inEval) {
+        return listConvert(withFakeTaps.first);
+    }
+
     int ins, outs;
     getBoxType(box, &ins, &outs);
 
