@@ -298,7 +298,7 @@ bool isElement(Tree e, Tree l)
         if (hd(l) == e) {
             return true;
         }
-        if (hd(l) > e) {
+        if (e < hd(l)) {
             return false;
         }
         l = tl(l);
@@ -538,7 +538,7 @@ Tree tmap(Tree key, tfun f, Tree t)
 static Tree substkey(Tree t, Tree id, Tree val)
 {
     char name[256];
-    snprintf(name, 255, "SUBST<%p,%p,%p> : ", t, id, val);
+    snprintf(name, 255, "SUBST<%p,%p,%p> : ", (void*)t, (void*)id, (void*)val);
     return tree(unique(name));
 }
 

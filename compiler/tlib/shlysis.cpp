@@ -67,7 +67,7 @@ unique to each sharing analysis must be generated.
 Tree shprkey(Tree t)
 {
     char name[256];
-    snprintf(name, 256, "SHARED IN %p : ", t);
+    snprintf(name, 256, "SHARED IN %p : ", (void*)t);
     return tree(unique(name));
 }
 

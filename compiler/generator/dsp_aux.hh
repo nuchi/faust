@@ -37,6 +37,7 @@
 #include "faust/export.h"
 
 #include "exception.hh"
+#include "noncompptr.hh"
 
 /*!
     \brief the base class for smart pointers implementation
@@ -315,7 +316,8 @@ std::string sha1FromDSP(const std::string& name_app, const std::string& dsp_cont
                         const char* argv[], std::string& sha_key);
 
 class CTreeBase;
-typedef CTreeBase*        Tree;
+// typedef CTreeBase*        Tree;
+typedef NonComparablePtr<CTreeBase> Tree;
 typedef std::vector<Tree> tvec;
 
 tvec boxesToSignalsAux(Tree box);

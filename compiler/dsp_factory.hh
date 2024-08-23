@@ -33,6 +33,7 @@
 #include "faust/gui/meta.h"
 
 #include "exception.hh"
+#include "noncompptr.hh"
 
 #define COMPILATION_OPTIONS_KEY "compile_options"
 #define COMPILATION_OPTIONS "declare compile_options "
@@ -197,7 +198,8 @@ class text_dsp_factory_aux : public dsp_factory_imp {
 // Backend API implemented in libcode.cpp
 
 class CTreeBase;
-typedef CTreeBase*          Signal;
+// typedef CTreeBase*          Signal;
+typedef NonComparablePtr<CTreeBase> Signal;
 typedef std::vector<Signal> tvec;
 
 dsp_factory_base* createFactory(const std::string& name_app, const std::string& dsp_content,

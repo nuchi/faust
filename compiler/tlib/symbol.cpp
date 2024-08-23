@@ -45,7 +45,7 @@ map<string, size_t> Symbol::gPrefixCounters;
  * \return a symbol of name str
  */
 
-Symbol* Symbol::get(const string& rawstr)
+Sym Symbol::get(const string& rawstr)
 {
     // ---replaces control characters with white spaces---
     string str = rawstr;
@@ -62,7 +62,7 @@ Symbol* Symbol::get(const string& rawstr)
     }
     Symbol* r = item ? item : (gSymbolTable[bckt] = new Symbol(str, hsh, gSymbolTable[bckt]));
 
-    return r;
+    return Sym(r);
 }
 
 /**
@@ -88,7 +88,7 @@ bool Symbol::isnew(const string& str)
  * order to make it unique. \param str the prefix of the name \return a symbol of name \p prefix++n
  */
 
-Symbol* Symbol::prefix(const string& str)
+Sym Symbol::prefix(const string& str)
 {
     string name;
 
@@ -162,4 +162,14 @@ void Symbol::init()
 {
     gPrefixCounters.clear();
     memset(gSymbolTable, 0, sizeof(Symbol*) * kHashTableSize);
+}
+
+template <>
+bool NonComparablePtr<Symbol>::operator<(const NonComparablePtr<Symbol>& other) const {
+    if (fPtr->fHash < other.fPtr->fHash) {
+        return true;
+    } else if (fPtr->fHash > other.fPtr->fHash) {
+        return false;
+    }
+    return fPtr->fName < other.fPtr->fName;
 }

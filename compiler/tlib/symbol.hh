@@ -42,13 +42,18 @@
 #include <string>
 
 #include "garbageable.hh"
+#include "noncompptr.hh"
 
 //--------------------------------SYMBOL-------------------------------------
 
 /**
  * Symbols are unique objects with a name stored in a hash table.
  */
-class Symbol : public virtual Garbageable {
+
+class Symbol;
+typedef NonComparablePtr<Symbol> Sym;
+
+class Symbol : public NonComparablePtrBase<Symbol>, public virtual Garbageable {
    private:
     static const int kHashTableSize =
         511;  ///< Size of the hash table (a prime number is recommended)
@@ -73,48 +78,53 @@ class Symbol : public virtual Garbageable {
         const std::string& str);  ///< Compute the 32-bits hash key of string \p str
 
     // Static methods
-    static Symbol* get(const std::string& str);  ///< Get the symbol of name \p str
-    static Symbol* prefix(
+    static Sym get(const std::string& str);  ///< Get the symbol of name \p str
+    static Sym prefix(
         const std::string& str);  ///< Creates a new symbol of name prefixed by \p str
     static bool isnew(
         const std::string& str);  ///< Returns \b true if no symbol of name \p str exists
 
    public:
     std::ostream& print(std::ostream& fout) const;  ///< print a symbol on a stream
+    // bool operator<(const Symbol& other) const {
+    //     return fName < other.fName;
+    // }
 
-    friend Symbol*     symbol(const char* str);
-    friend Symbol*     symbol(const std::string& str);
-    friend Symbol*     unique(const char* str);
-    friend const char* name(Symbol* sym);
+    friend Sym         symbol(const char* str);
+    friend Sym         symbol(const std::string& str);
+    friend Sym         unique(const char* str);
+    friend const char* name(Sym sym);
 
-    friend void* getUserData(Symbol* sym);
-    friend void  setUserData(Symbol* sym, void* d);
+    friend void* getUserData(Sym sym);
+    friend void  setUserData(Sym sym, void* d);
+
+    friend bool NonComparablePtr<Symbol>::operator<(const NonComparablePtr<Symbol>& other) const;
 
     static void init();
 };
 
-inline Symbol* symbol(const char* str)
+inline Sym symbol(const char* str)
 {
     return Symbol::get(str);
 }  ///< Returns (and creates if new) the symbol of name \p str
-inline Symbol* symbol(const std::string& str)
+inline Sym symbol(const std::string& str)
 {
     return Symbol::get(str);
 }  ///< Returns (and creates if new) the symbol of name \p str
-inline Symbol* unique(const char* str)
+inline Sym unique(const char* str)
 {
     return Symbol::prefix(str);
 }  ///< Returns a new unique symbol of name strxxx
-inline const char* name(Symbol* sym)
+inline const char* name(Sym sym)
 {
     return sym->fName.c_str();
 }  ///< Returns the name of a symbol
 
-inline void* getUserData(Symbol* sym)
+inline void* getUserData(Sym sym)
 {
     return sym->fData;
 }  ///< Returns user data
-inline void setUserData(Symbol* sym, void* d)
+inline void setUserData(Sym sym, void* d)
 {
     sym->fData = d;
 }  ///< Set user data
@@ -124,6 +134,6 @@ inline std::ostream& operator<<(std::ostream& s, const Symbol& n)
     return n.print(s);
 }
 
-typedef Symbol* Sym;
+// typedef Symbol* Sym;
 
 #endif

@@ -119,7 +119,7 @@ CTreeBase::CTreeBase(size_t hk, const Node& n, const tvec& br)
     // link in the hash table
     int j         = hk % kHashTableSize;
     fNext         = gHashTable[j];
-    gHashTable[j] = this;
+    gHashTable[j] = Tree(this);
 }
 
 // Destructor
@@ -166,9 +166,9 @@ Tree CTreeBase::make(const Node& n, const tvec& br)
     if (t) {
         return t;
     } else if (global::isDebug("FAUST_DTREE")) {
-        return new CDTree(hk, n, br);
+        return Tree((CTreeBase*)(new CDTree(hk, n, br)));
     } else {
-        return new CTree(hk, n, br);
+        return Tree((CTreeBase*)(new CTree(hk, n, br)));
     }
 }
 
@@ -219,6 +219,11 @@ void CTreeBase::init()
     memset(gHashTable, 0, sizeof(Tree) * kHashTableSize);
 }
 
+template <>
+bool NonComparablePtr<CTreeBase>::operator<(const NonComparablePtr<CTreeBase>& other) const {
+    return fPtr->serial() < other.fPtr->serial();
+}
+
 void CDTree::init()
 {
     gAllocatedBlock = nullptr;
@@ -231,7 +236,7 @@ void CDTree::init()
 void CDTree::cleanup()
 {
     for (const auto& it : gAllocatedBlocks) {
-        delete[] it;
+        delete[] (const void*)it;
     }
     gAllocatedBlocks.clear();
 }

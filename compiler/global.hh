@@ -40,6 +40,7 @@
 #include "property.hh"
 #include "smartpointer.hh"
 #include "sourcereader.hh"
+#include "noncompptr.hh"
 
 class Occur;
 
@@ -47,10 +48,11 @@ class AudioType;
 typedef P<AudioType> Type;
 
 class CTreeBase;
-typedef CTreeBase* Tree;
+// typedef CTreeBase* Tree;
+typedef NonComparablePtr<CTreeBase> Tree;
 
 class Symbol;
-typedef Symbol* Sym;
+typedef NonComparablePtr<Symbol> Sym;
 
 class xtended;
 class AudioType;

@@ -80,7 +80,8 @@
 //---------------------------------API---------------------------------------
 
 class CTreeBase;
-typedef CTreeBase* Tree;
+// typedef CTreeBase* Tree;
+typedef NonComparablePtr<CTreeBase> Tree;
 
 typedef std::map<Tree, Tree> plist;
 typedef std::vector<Tree>    tvec;
@@ -100,7 +101,7 @@ typedef std::vector<Tree>    tvec;
  *
  **/
 
-class LIBFAUST_API CTreeBase {
+class LIBFAUST_API CTreeBase : public NonComparablePtrBase<CTreeBase> {
    protected:
     static const int kHashTableSize = 400009;     ///< size of the hash table (prime number)
     static size_t    gSerialCounter;              ///< the serial number counter
@@ -216,12 +217,12 @@ class LIBFAUST_API CDTree : public CTreeBase {
             Tree new_block = nullptr;
             // Possibly try several times...
             do {
-                new_block = new CDTree[kBlockSize];
+                new_block = Tree(new CDTree[kBlockSize]);
                 gAllocatedBlocks.push_back(new_block);
-            } while (new_block < gAllocatedBlock);
+            } while (false); // (new_block < gAllocatedBlock);
             gAllocatedBlock = new_block;
         }
-        return &gAllocatedBlock[gSerialCounter % kBlockSize];
+        return std::addressof(gAllocatedBlock[gSerialCounter % kBlockSize]);
     }
 
     void operator delete(void* ptr) {}
